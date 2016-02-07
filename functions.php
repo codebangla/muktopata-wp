@@ -156,3 +156,171 @@ require get_template_directory() . '/inc/jetpack.php';
 */
 require get_template_directory() . '/inc/functions-strap.php';
 
+
+/****************Custom Post Type******************
+ ***********@author: Md. Sajedul Haque Romi********
+ *************************************************/
+
+/*****************Product Custom Post Type starts********************/
+
+function my_custom_post_product() {
+	$labels = array(
+		'name'               => _x( 'Products', 'post type general name' ),
+		'singular_name'      => _x( 'Product', 'post type singular name' ),
+		'add_new'            => _x( 'Add New', 'book' ),
+		'add_new_item'       => __( 'Add New Product' ),
+		'edit_item'          => __( 'Edit Product' ),
+		'new_item'           => __( 'New Product' ),
+		'all_items'          => __( 'All Products' ),
+		'view_item'          => __( 'View Product' ),
+		'search_items'       => __( 'Search Products' ),
+		'not_found'          => __( 'No products found' ),
+		'not_found_in_trash' => __( 'No products found in the Trash' ),
+		'parent_item_colon'  => '',
+		'menu_name'          => 'Products'
+	);
+	$args = array(
+		'labels'        => $labels,
+		'description'   => 'Holds our products and product specific data',
+		'public'        => true,
+		'menu_position' => 5,
+		'supports'      => array( 'title', 'editor', 'thumbnail', 'excerpt', 'comments' ),
+		'has_archive'   => true,
+		'menu_icon'           => 'dashicons-cart',
+	);
+	register_post_type( 'product', $args );
+}
+add_action( 'init', 'my_custom_post_product' );
+
+/*****************Product Custom Post Type ends********************/
+
+
+function my_updated_messages( $messages ) {
+	global $post, $post_ID;
+	$messages['product'] = array(
+		0 => '',
+		1 => sprintf( __('Product updated. <a href="%s">View product</a>'), esc_url( get_permalink($post_ID) ) ),
+		2 => __('Custom field updated.'),
+		3 => __('Custom field deleted.'),
+		4 => __('Product updated.'),
+		5 => isset($_GET['revision']) ? sprintf( __('Product restored to revision from %s'), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
+		6 => sprintf( __('Product published. <a href="%s">View product</a>'), esc_url( get_permalink($post_ID) ) ),
+		7 => __('Product saved.'),
+		8 => sprintf( __('Product submitted. <a target="_blank" href="%s">Preview product</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
+		9 => sprintf( __('Product scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview product</a>'), date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), esc_url( get_permalink($post_ID) ) ),
+		10 => sprintf( __('Product draft updated. <a target="_blank" href="%s">Preview product</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
+	);
+	return $messages;
+}
+add_filter( 'post_updated_messages', 'my_updated_messages' );
+
+
+function my_contextual_help( $contextual_help, $screen_id, $screen ) {
+	if ( 'product' == $screen->id ) {
+
+		$contextual_help = '<h2>Products</h2>
+    <p>Products show the details of the items that we sell on the website. You can see a list of them on this page in reverse chronological order - the latest one we added is first.</p>
+    <p>You can view/edit the details of each product by clicking on its name, or you can perform bulk actions using the dropdown menu and selecting multiple items.</p>';
+
+	} elseif ( 'edit-product' == $screen->id ) {
+
+		$contextual_help = '<h2>Editing products</h2>
+    <p>This page allows you to view/modify product details. Please make sure to fill out the available boxes with the appropriate details (product image, price, brand) and <strong>not</strong> add these details to the product description.</p>';
+
+	}
+	return $contextual_help;
+}
+add_action( 'contextual_help', 'my_contextual_help', 10, 3 );
+
+/*****************Product Category Taxonomy starts********************/
+
+function my_taxonomies_product() {
+	$labels = array(
+		'name'              => _x( 'Product Categories', 'taxonomy general name' ),
+		'singular_name'     => _x( 'Product Category', 'taxonomy singular name' ),
+		'search_items'      => __( 'Search Product Categories' ),
+		'all_items'         => __( 'All Product Categories' ),
+		'parent_item'       => __( 'Parent Product Category' ),
+		'parent_item_colon' => __( 'Parent Product Category:' ),
+		'edit_item'         => __( 'Edit Product Category' ),
+		'update_item'       => __( 'Update Product Category' ),
+		'add_new_item'      => __( 'Add New Product Category' ),
+		'new_item_name'     => __( 'New Product Category' ),
+		'menu_name'         => __( 'Product Categories' ),
+	);
+	$args = array(
+		'labels' => $labels,
+		'hierarchical' => true,
+	);
+	register_taxonomy( 'product_category', 'product', $args );
+}
+add_action( 'init', 'my_taxonomies_product', 0 );
+
+
+/*****************Product Category Taxonomy ends********************/
+
+/*****************MetaBox starts********************/
+add_action( 'add_meta_boxes', 'product_price_box' );
+function product_price_box() {
+	add_meta_box(
+		'product_price_box',
+		__( 'Product Price', 'myplugin_textdomain' ),
+		'product_price_box_content',
+		'product',
+		'side',
+		'high'
+	);
+}
+/*****************MetaBox starts********************/
+
+function product_price_box_content( $post ) {
+	wp_nonce_field( plugin_basename( __FILE__ ), 'product_price_box_content_nonce' );
+	echo '<label for="product_price"></label>';
+	echo '<input type="text" id="product_price" name="product_price" placeholder="enter a price" />';
+}
+add_action( 'save_post', 'save_custom_details' );
+
+function product_price_box_save( $post_id )
+{
+	// Bail if we're doing an auto save
+	if( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+
+	// if our nonce isn't there, or we can't verify it, bail
+	if( !isset( $_POST['product_price_box_content_nonce'] ) || !wp_verify_nonce( $_POST['product_price_box_content_nonce'], 'product_price_box_content_nonce' ) ) return;
+
+	// if our current user can't edit this post, bail
+	if( !current_user_can( 'edit_post' ) ) return;
+
+	// now we can actually save the data
+	$allowed = array(
+		'a' => array( // on allow a tags
+			'href' => array() // and those anchors can only have href attribute
+		)
+	);
+
+	// Make sure your data is set before trying to save it
+	if( isset( $_POST['product_price'] ) )
+		update_post_meta( $post_id, 'product_price', wp_kses( $_POST['product_price'], $allowed ) );
+
+
+}
+
+
+
+function save_custom_details( $post_id ) {
+	global $post;
+	//skip auto save
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return $post_id;
+	}
+	//check for you post type only
+	if( $post->post_type == "product" ) {
+		if( isset($_POST['product_price']) ) { update_post_meta( $post->ID, 'product_price', $_POST['product_price'] );}
+		//if( isset($_POST['ingredients']) ) { update_post_meta( $post->ID, 'ingredients', $_POST['ingredients'] );}
+
+	}
+}
+
+
+
+/*****************MetaBox starts********************/
