@@ -184,6 +184,7 @@ function my_custom_post_product() {
 		'description'   => 'Holds our products and product specific data',
 		'public'        => true,
 		'menu_position' => 5,
+		'show_in_rest'       => true,
 		'supports'      => array( 'title', 'editor', 'thumbnail', 'excerpt', 'comments' ),
 		'has_archive'   => true,
 		'menu_icon'           => 'dashicons-cart',
@@ -271,36 +272,41 @@ function product_price_box() {
 		'high'
 	);
 }
-/*****************MetaBox starts********************/
 
 function product_price_box_content( $post ) {
-	wp_nonce_field( plugin_basename( __FILE__ ), 'product_price_box_content_nonce' );
+	global $post;
+if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
+$custom = get_post_custom($post->ID);
+$link = $custom["product_price"][0];
+	$link2 = $custom["product_qty"][0];
+wp_nonce_field( plugin_basename( __FILE__ ), 'product_price_box_content_nonce' );
 	echo '<label for="product_price"></label>';
-	echo '<input type="text" id="product_price" name="product_price" placeholder="enter a price" />';
+	echo '<input type="text" id="product_price" name="product_price" placeholder="enter a price"  value=" '.$link . ' " />';
+	echo '<label for="product_qty"></label>';
+	echo '<input type="text" id="product_qty" name="product_qty" placeholder="enter a size/weight (eg: 1pc/150gm)" value=" '.$link2 . ' " />';
+
 }
-add_action( 'save_post', 'save_custom_details' );
+add_action( 'save_post', 'product_price_box_save' );
 
 function product_price_box_save( $post_id )
 {
+
+	global $post;
 	// Bail if we're doing an auto save
-	if( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+	if( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return $post_id;
 
 	// if our nonce isn't there, or we can't verify it, bail
-	if( !isset( $_POST['product_price_box_content_nonce'] ) || !wp_verify_nonce( $_POST['product_price_box_content_nonce'], 'product_price_box_content_nonce' ) ) return;
+	//if( !isset( $_POST['product_price_box_content_nonce'] ) || !wp_verify_nonce( $_POST['product_price_box_content_nonce'], 'product_price_box_content_nonce' ) ) return;
+	//if( !isset( $_POST['product_qty_box_content_nonce'] ) || !wp_verify_nonce( $_POST['product_qty_box_content_nonce'], 'product_qty_box_content_nonce' ) ) return;
 
 	// if our current user can't edit this post, bail
 	if( !current_user_can( 'edit_post' ) ) return;
 
-	// now we can actually save the data
-	$allowed = array(
-		'a' => array( // on allow a tags
-			'href' => array() // and those anchors can only have href attribute
-		)
-	);
-
 	// Make sure your data is set before trying to save it
 	if( isset( $_POST['product_price'] ) )
-		update_post_meta( $post_id, 'product_price', wp_kses( $_POST['product_price'], $allowed ) );
+		update_post_meta( $post->ID, 'product_price', wp_kses( $_POST['product_price'], $allowed ) );
+	if( isset( $_POST['product_qty'] ) )
+		update_post_meta( $post->ID, 'product_qty', wp_kses( $_POST['product_qty'], $allowed ) );
 
 
 }
@@ -322,5 +328,47 @@ function save_custom_details( $post_id ) {
 }
 
 
+// support for REST API
 
-/*****************MetaBox starts********************/
+add_action( 'rest_api_init', 'add_location_to_career_endpoint' );
+function add_location_to_career_endpoint() {
+	register_rest_field( 'product',
+		'product_price',
+		array(
+			'get_callback'    => 'product_get_price',
+			'update_callback' => null,
+			'schema'          => null,
+		)
+	);
+	register_rest_field( 'product',
+		'product_qty',
+		array(
+			'get_callback'    => 'product_get_qty',
+			'update_callback' => null,
+			'schema'          => null,
+		)
+	);
+}
+function product_get_price( $object, $field_name, $request ) {
+	//return get_the_terms( $object[ 'product_price' ], $taxonomies, null);
+    return  get_post_meta( $object[ 'id' ], 'product_price', true );
+}
+
+function product_get_qty( $object, $field_name, $request ) {
+	//return get_the_terms( $object[ 'product_price' ], $taxonomies, null);
+	return  get_post_meta( $object[ 'id' ], 'product_qty', true );
+}
+
+
+/*****************MetaBox ends********************/
+
+
+
+
+add_image_size( 'product-img-home', 320, 200 );
+
+function product_thumbnail_url($pid){
+	$image_id = get_post_thumbnail_id($pid);
+	$image_url = wp_get_attachment_image_src($image_id, 'product-img-home');
+	return  $image_url[0];
+}

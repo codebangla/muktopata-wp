@@ -17,6 +17,10 @@ get_header();
 
         <div class="col-md-3">
             <p class="lead">Shop Name</p>
+
+            <?php wp_list_categories(); ?>
+
+
             <div class="list-group">
                 <a href="#" class="list-group-item">Category 1</a>
                 <a href="#" class="list-group-item">Category 2</a>
@@ -69,7 +73,10 @@ get_header();
                         ?>
                         <div class="col-sm-4 col-lg-4 col-md-4">
                             <div class="thumbnail">
-                                <img src="http://placehold.it/320x150" alt="">
+                                <img src="<?php echo  product_thumbnail_url($post->ID) ?>" alt="">
+
+
+
                                 <div class="caption">
                                     <h4 class="pull-right">৳<?php
                                         // If we are in a loop we can get the post ID easily
@@ -78,7 +85,9 @@ get_header();
                                         echo $price; ?></h4>
                                     <?php the_title( sprintf( '<h4><a href="%s" rel="bookmark">', esc_url( get_permalink() ) ), '</a></h4>' ); ?>
 
-                                    <p><?php the_content() ?></p>
+                                    <p><?php $quantity = get_post_meta( get_the_ID(), 'product_qty', true );
+
+                                        echo $quantity; ?></p>
                                 </div>
                                 <div class="ratings">
                                     <p class="pull-right">12 reviews</p>
