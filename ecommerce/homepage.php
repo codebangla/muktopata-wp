@@ -18,14 +18,24 @@ get_header();
         <div class="col-md-3">
             <p class="lead">Shop Name</p>
 
-            <?php wp_list_categories(); ?>
 
 
-            <div class="list-group">
-                <a href="#" class="list-group-item">Category 1</a>
-                <a href="#" class="list-group-item">Category 2</a>
-                <a href="#" class="list-group-item">Category 3</a>
-            </div>
+            <style>
+                ul.product-cat {
+                    list-style: none;
+                }
+
+            </style>
+
+            <ul class="list-group product-cat">
+
+
+                <?php $categories = get_categories('taxonomy=product_category&post_type=product'); ?>
+                <?php foreach ($categories as $category) : ?>
+                    <li><a class="list-group-item" href="<?php echo get_category_link($category->cat_ID); ?>"><?php echo $category->name; ?></a></li>
+                <?php endforeach; ?>
+
+            </ul>
         </div>
 
         <div class="col-md-9">

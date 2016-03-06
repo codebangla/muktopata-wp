@@ -252,6 +252,9 @@ function my_taxonomies_product() {
 	$args = array(
 		'labels' => $labels,
 		'hierarchical' => true,
+		'show_in_rest'       => true,
+		'query_var'         => true,
+		'rewrite'           => array( 'slug' => 'product' ),
 	);
 	register_taxonomy( 'product_category', 'product', $args );
 }
@@ -328,7 +331,7 @@ function save_custom_details( $post_id ) {
 }
 
 
-// support for REST API
+// support for the REST API
 
 add_action( 'rest_api_init', 'add_location_to_career_endpoint' );
 function add_location_to_career_endpoint() {
